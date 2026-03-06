@@ -1,78 +1,51 @@
+/* dashboard.js — TweetReaper v2 (OAuth) */
+
+// ─── State ───────────────────────────────────────────────────────────
 const state = {
-  tweets: [],
-  selected: new Set(),
-  nextToken: null,
-  isDeleting: false,
+  tweets:     [],
+  selected:   new Set(),
   deletedIds: new Set(),
+  nextToken:  null,
+  isDeleting: false,
 };
 
 // ─── DOM refs ────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
-const btnFetch     = $("btnFetch");
-const btnLoadMore  = $("btnLoadMore");
-const btnDelete    = $("btnDelete");
-const btnAbort     = $("btnAbort");
-const btnSelectAll = $("btnSelectAll");
+const btnFetch      = $("btnFetch");
+const btnLoadMore   = $("btnLoadMore");
+const btnDelete     = $("btnDelete");
+const btnAbort      = $("btnAbort");
+const btnSelectAll  = $("btnSelectAll");
 const btnDeselectAll = $("btnDeselectAll");
-const tweetList    = $("tweetList");
-const emptyState   = $("emptyState");
-const loadingState = $("loadingState");
-const logFeed      = $("logFeed");
-const confirmModal = $("confirmModal");
-const modalCancel  = $("modalCancel");
-const modalConfirm = $("modalConfirm");
+const tweetList     = $("tweetList");
+const emptyState    = $("emptyState");
+const loadingState  = $("loadingState");
+const logFeed       = $("logFeed");
+const confirmModal  = $("confirmModal");
 const progressSection = $("progressSection");
-const ringFill     = $("ringFill");
+const ratelimitBox  = $("ratelimitBox");
+const ringFill      = $("ringFill");
 
-let abortController = null;
+let rlTimer = null;
 
-// ─── Init ─────────────────────────────────────────────────────────────
-async function init() {
-  try {
-    const res = await fetch("/api/me");
-    const data = await res.json();
-    if (data.success) {
-      const u = data.user;
-      $("userName").textContent = u.name;
-      $("userHandle").textContent = "@" + u.username;
-      if (u.public_metrics?.tweet_count !== undefined) {
-        $("userTweetCount").textContent = u.public_metrics.tweet_count.toLocaleString();
-      }
-      if (u.profile_image_url) {
-        const img = $("userAvatar");
-        img.src = u.profile_image_url.replace("_normal", "_400x400");
-        img.classList.remove("hidden");
-        img.nextElementSibling.style.display = "none";
-      }
-      appendLog("Connected as @" + u.username, "success");
-    } else {
-      $("userName").textContent = "API Error";
-      appendLog("Auth failed: " + data.error, "error");
-    }
-  } catch (e) {
-    $("userName").textContent = "Offline";
-    appendLog("Could not reach API: " + e.message, "error");
-  }
-}
-
-// ─── Delay slider ──────────────────────────────────────────────────
-const delaySlider = $("delaySlider");
-const delayVal    = $("delayVal");
-delaySlider.addEventListener("input", () => {
-  delayVal.textContent = delaySlider.value + "ms";
+// ─── Slider ──────────────────────────────────────────────────────────
+$("delaySlider").addEventListener("input", () => {
+  $("delayVal").textContent = $("delaySlider").value + "ms";
 });
 
-// ─── Fetch tweets ──────────────────────────────────────────────────
+// ─── Fetch tweets ─────────────────────────────────────────────────────
 async function fetchTweets(loadMore = false) {
   if (!loadMore) {
     state.tweets = [];
     state.selected.clear();
     state.nextToken = null;
+    state.deletedIds.clear();
     tweetList.innerHTML = "";
     emptyState.classList.add("hidden");
     loadingState.classList.remove("hidden");
-    $("btnSelectAll").style.display = "none";
-    $("btnDeselectAll").style.display = "none";
+    btnSelectAll.style.display = "none";
+    btnDeselectAll.style.display = "none";
+    $("miniStats").style.display = "none";
   }
 
   btnFetch.disabled = true;
@@ -80,45 +53,41 @@ async function fetchTweets(loadMore = false) {
 
   const params = new URLSearchParams({
     limit: 100,
-    includeReplies: $("inclReplies").checked,
-    includeRetweets: $("inclRetweets").checked,
+    includeReplies:   $("inclReplies").checked,
+    includeRetweets:  $("inclRetweets").checked,
   });
   if (state.nextToken) params.set("paginationToken", state.nextToken);
 
   try {
-    const res = await fetch("/api/tweets?" + params);
+    const res  = await fetch("/api/tweets?" + params);
     const data = await res.json();
+
+    if (res.status === 401) {
+      appendLog("Session expired. Please reconnect Twitter.", "error");
+      setTimeout(() => window.location.href = "/", 2000);
+      return;
+    }
+
     if (!data.success) throw new Error(data.error);
 
     let tweets = data.tweets || [];
 
-    // Client-side filters
-    const dateFilter = $("filterDate").value;
-    const kwFilter   = $("filterKeyword").value.trim().toLowerCase();
-
-    if (dateFilter) {
-      const cutoff = new Date(dateFilter);
-      tweets = tweets.filter((t) => new Date(t.created_at) < cutoff);
-    }
-    if (kwFilter) {
-      tweets = tweets.filter((t) => t.text.toLowerCase().includes(kwFilter));
-    }
+    // Client-side filter
+    const dateKw = $("filterDate").value;
+    const kw     = $("filterKeyword").value.trim().toLowerCase();
+    if (dateKw) { const cutoff = new Date(dateKw); tweets = tweets.filter(t => new Date(t.created_at) < cutoff); }
+    if (kw)     { tweets = tweets.filter(t => t.text.toLowerCase().includes(kw)); }
 
     state.tweets.push(...tweets);
     state.nextToken = data.nextToken;
 
     loadingState.classList.add("hidden");
-    renderTweets(tweets, loadMore);
+    renderTweets(tweets);
     updateMiniStats();
     updateDeleteBtn();
-
     appendLog(`Loaded ${tweets.length} tweets (total: ${state.tweets.length})`, "success");
 
-    if (state.nextToken) {
-      btnLoadMore.style.display = "block";
-    } else {
-      btnLoadMore.style.display = "none";
-    }
+    btnLoadMore.style.display = state.nextToken ? "block" : "none";
   } catch (e) {
     appendLog("Fetch error: " + e.message, "error");
     loadingState.classList.add("hidden");
@@ -129,10 +98,8 @@ async function fetchTweets(loadMore = false) {
   }
 }
 
-// ─── Render tweets ─────────────────────────────────────────────────
-function renderTweets(tweets, append = false) {
-  if (!append) tweetList.innerHTML = "";
-
+// ─── Render tweets ────────────────────────────────────────────────────
+function renderTweets(tweets) {
   if (state.tweets.length === 0) {
     emptyState.classList.remove("hidden");
     $("tweetPanelCount").textContent = "No tweets found";
@@ -141,24 +108,25 @@ function renderTweets(tweets, append = false) {
 
   emptyState.classList.add("hidden");
   $("tweetPanelCount").textContent = `${state.tweets.length} tweet${state.tweets.length !== 1 ? "s" : ""} loaded`;
-  $("btnSelectAll").style.display = "flex";
-  $("btnDeselectAll").style.display = "flex";
+  btnSelectAll.style.display = "flex";
+  btnDeselectAll.style.display = "flex";
   $("miniStats").style.display = "flex";
 
   tweets.forEach((tweet, i) => {
     const card = document.createElement("div");
     card.className = "tweet-card";
     card.dataset.id = tweet.id;
-    card.style.animationDelay = `${Math.min(i, 20) * 30}ms`;
+    card.style.animationDelay = `${Math.min(i, 30) * 25}ms`;
 
     const date = new Date(tweet.created_at).toLocaleDateString("id-ID", {
       day: "numeric", month: "short", year: "numeric",
       hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta",
     });
 
-    const isReply = tweet.text.startsWith("@");
     const isRT    = tweet.text.startsWith("RT @");
+    const isReply = tweet.text.startsWith("@") && !isRT;
     const likes   = tweet.public_metrics?.like_count || 0;
+    const rts     = tweet.public_metrics?.retweet_count || 0;
 
     card.innerHTML = `
       <div class="tweet-check"></div>
@@ -167,8 +135,9 @@ function renderTweets(tweets, append = false) {
         <div class="tweet-meta">
           <span class="tweet-date">${date}</span>
           ${isRT ? '<span class="tweet-badge retweet">RT</span>' : ""}
-          ${isReply && !isRT ? '<span class="tweet-badge reply">Reply</span>' : ""}
+          ${isReply ? '<span class="tweet-badge reply">Reply</span>' : ""}
           ${likes > 0 ? `<span class="tweet-likes">♥ ${likes}</span>` : ""}
+          ${rts > 0 ? `<span class="tweet-likes">↺ ${rts}</span>` : ""}
         </div>
       </div>
     `;
@@ -178,7 +147,7 @@ function renderTweets(tweets, append = false) {
   });
 }
 
-// ─── Selection ─────────────────────────────────────────────────────
+// ─── Selection ────────────────────────────────────────────────────────
 function toggleSelect(id, card) {
   if (state.selected.has(id)) {
     state.selected.delete(id);
@@ -192,171 +161,153 @@ function toggleSelect(id, card) {
 }
 
 btnSelectAll.addEventListener("click", () => {
-  state.tweets.forEach((t) => {
-    if (!state.deletedIds.has(t.id)) {
-      state.selected.add(t.id);
-    }
+  state.tweets.forEach(t => {
+    if (!state.deletedIds.has(t.id)) state.selected.add(t.id);
   });
-  document.querySelectorAll(".tweet-card:not(.deleted)").forEach((c) => c.classList.add("selected"));
+  document.querySelectorAll(".tweet-card:not(.deleted)").forEach(c => c.classList.add("selected"));
   updateMiniStats();
   updateDeleteBtn();
 });
 
 btnDeselectAll.addEventListener("click", () => {
   state.selected.clear();
-  document.querySelectorAll(".tweet-card").forEach((c) => c.classList.remove("selected"));
+  document.querySelectorAll(".tweet-card").forEach(c => c.classList.remove("selected"));
   updateMiniStats();
   updateDeleteBtn();
 });
 
-// ─── UI updaters ───────────────────────────────────────────────────
+// ─── UI updates ───────────────────────────────────────────────────────
 function updateMiniStats() {
   $("msLoaded").textContent   = state.tweets.length;
   $("msSelected").textContent = state.selected.size;
-  const kwF  = $("filterKeyword").value.trim();
-  const dateF = $("filterDate").value;
-  $("msFiltered").textContent = (kwF || dateF) ? state.tweets.length : "—";
 }
 
 function updateDeleteBtn() {
-  const n = state.selected.size;
-  $("dsNum").textContent = n;
+  const n    = state.selected.size;
   const isDry = $("dryRun").checked;
+  $("dsNum").textContent = n;
   btnDelete.disabled = n === 0 || state.isDeleting;
   $("btnDeleteLabel").textContent = isDry ? `Preview ${n} Tweets` : `Delete ${n} Tweets`;
 }
-
 $("dryRun").addEventListener("change", updateDeleteBtn);
 
-// ─── Delete flow ───────────────────────────────────────────────────
+// ─── Delete flow ──────────────────────────────────────────────────────
 btnDelete.addEventListener("click", () => {
   if (state.selected.size === 0) return;
   const isDry = $("dryRun").checked;
-  $("modalCount").textContent = state.selected.size;
-  const body = isDry
-    ? `<strong>DRY RUN</strong>: This will preview ${state.selected.size} tweets without deleting anything.`
-    : `You are about to permanently delete <strong>${state.selected.size}</strong> tweets. This action <strong>cannot be undone.</strong>`;
-  $("modalBody").innerHTML = body;
+  const n     = state.selected.size;
+  $("modalBody").innerHTML = isDry
+    ? `<strong>DRY RUN:</strong> Preview ${n} tweets — nothing will be deleted.`
+    : `You are about to permanently delete <strong>${n}</strong> tweets. This action <strong>cannot be undone.</strong>`;
   confirmModal.classList.add("open");
 });
 
-modalCancel.addEventListener("click", () => {
-  confirmModal.classList.remove("open");
-});
-
-confirmModal.addEventListener("click", (e) => {
-  if (e.target === confirmModal) confirmModal.classList.remove("open");
-});
-
-modalConfirm.addEventListener("click", () => {
-  confirmModal.classList.remove("open");
-  startDeletion();
-});
+$("modalCancel").addEventListener("click", () => confirmModal.classList.remove("open"));
+confirmModal.addEventListener("click", e => { if (e.target === confirmModal) confirmModal.classList.remove("open"); });
+$("modalConfirm").addEventListener("click", () => { confirmModal.classList.remove("open"); startDeletion(); });
 
 async function startDeletion() {
-  if (state.selected.size === 0 || state.isDeleting) return;
+  if (!state.selected.size || state.isDeleting) return;
   state.isDeleting = true;
   btnDelete.disabled = true;
   btnAbort.style.display = "block";
   progressSection.style.display = "block";
-  $("logSection").style.display = "block";
 
   const isDry  = $("dryRun").checked;
-  const delay  = parseInt(delaySlider.value);
+  const delay  = parseInt($("delaySlider").value);
   const ids    = [...state.selected];
-  let deleted  = 0;
-  let failed   = 0;
+  let deleted  = 0, failed = 0;
 
-  setProgress(0, ids.length);
-  appendLog(`Starting ${isDry ? "DRY RUN" : "deletion"} of ${ids.length} tweets...`, "warn");
+  setProgress(0, ids.length, 0, 0);
+  appendLog(`Starting ${isDry ? "DRY RUN" : "deletion"} — ${ids.length} tweets...`, "warn");
 
   if (isDry) {
-    // Simulate dry run
     for (let i = 0; i < ids.length; i++) {
       if (!state.isDeleting) break;
-      await sleep(Math.min(delay / 4, 200));
+      await sleep(Math.min(delay / 5, 150));
       const card = document.querySelector(`.tweet-card[data-id="${ids[i]}"]`);
-      const snippet = card?.querySelector(".tweet-text")?.textContent?.slice(0, 50) || ids[i];
-      appendLog(`[DRY] Would delete: "${snippet}..."`, "info");
+      const snip = card?.querySelector(".tweet-text")?.textContent?.slice(0, 50) || ids[i];
+      appendLog(`[DRY] Would delete: "${snip}..."`, "info");
       deleted++;
       setProgress(i + 1, ids.length, deleted, failed);
-      $("pcDeleted").textContent = deleted;
     }
     appendLog(`DRY RUN complete. Would have deleted ${deleted} tweets.`, "success");
-  } else {
-    // Use SSE for real deletions
-    const body = JSON.stringify({ tweetIds: ids, delayMs: delay });
-    abortController = new AbortController();
+    state.isDeleting = false;
+    btnAbort.style.display = "none";
+    updateDeleteBtn();
+    return;
+  }
 
-    try {
-      const res = await fetch("/api/tweets/bulk-delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body,
-        signal: abortController.signal,
-      });
+  // Real deletion via SSE
+  try {
+    const res = await fetch("/api/tweets/bulk-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tweetIds: ids, delayMs: delay }),
+    });
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+    if (res.status === 401) {
+      appendLog("Session expired during deletion. Please reconnect.", "error");
+      setTimeout(() => window.location.href = "/", 2500);
+      return;
+    }
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop();
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer    = "";
 
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const evt = JSON.parse(line.slice(6));
-            handleSSEEvent(evt, ids);
-            if (evt.deleted !== undefined) deleted = evt.deleted;
-            if (evt.failed  !== undefined) failed  = evt.failed;
-            if (evt.type === "complete") break;
-          } catch (_) {}
-        }
-      }
-    } catch (e) {
-      if (e.name !== "AbortError") {
-        appendLog("Connection error: " + e.message, "error");
-      } else {
-        appendLog("Deletion aborted by user.", "warn");
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const evt = JSON.parse(line.slice(6));
+          handleSSE(evt, ids);
+        } catch (_) {}
       }
     }
+  } catch (e) {
+    if (e.name !== "AbortError") appendLog("Stream error: " + e.message, "error");
   }
 
   state.isDeleting = false;
   btnAbort.style.display = "none";
   updateDeleteBtn();
-  appendLog("Operation finished.", "info");
 }
 
-function handleSSEEvent(evt, ids) {
+function handleSSE(evt, ids) {
   switch (evt.type) {
     case "start":
-      appendLog(`Processing ${evt.total} tweets...`, "info");
+      appendLog(`Streaming ${evt.total} deletions...`, "info");
       break;
-    case "progress":
+    case "progress": {
       setProgress(evt.current, evt.total, evt.deleted, evt.failed);
-      $("pcDeleted").textContent = evt.deleted;
-      $("pcFailed").textContent  = evt.failed;
       if (evt.status === "deleted") {
         const card = document.querySelector(`.tweet-card[data-id="${evt.tweetId}"]`);
         if (card) { card.classList.add("deleted"); state.selected.delete(evt.tweetId); state.deletedIds.add(evt.tweetId); }
-        const snippet = card?.querySelector(".tweet-text")?.textContent?.slice(0, 45) || evt.tweetId;
-        appendLog(`✓ Deleted: "${snippet}..."`, "success");
+        const snip = card?.querySelector(".tweet-text")?.textContent?.slice(0, 48) || evt.tweetId;
+        appendLog(`✓ ${snip}...`, "success");
       } else {
-        appendLog(`✗ Failed ${evt.tweetId}: ${evt.error || "unknown"}`, "error");
+        appendLog(`✗ Failed ${evt.tweetId}: ${evt.error}`, "error");
       }
       break;
+    }
     case "ratelimit":
-      appendLog("⚠ Rate limit hit! Waiting 60s...", "ratelimit");
+      showRatelimit(evt.waitSec);
+      appendLog(`⚡ Rate limit hit — waiting ${evt.waitSec}s`, "ratelimit");
       break;
     case "complete":
-      appendLog(`Complete! ${evt.deleted} deleted, ${evt.failed} failed.`, "success");
       setProgress(evt.total, evt.total, evt.deleted, evt.failed);
+      appendLog(`✓ Done! ${evt.deleted} deleted, ${evt.failed} failed.`, "success");
+      hideRatelimit();
+      break;
+    case "aborted":
+      appendLog(`Aborted. ${evt.deleted} deleted before stop.`, "warn");
       break;
     case "error":
       appendLog("Error: " + evt.message, "error");
@@ -366,20 +317,33 @@ function handleSSEEvent(evt, ids) {
 
 btnAbort.addEventListener("click", () => {
   state.isDeleting = false;
-  if (abortController) abortController.abort();
+  appendLog("Abort requested...", "warn");
 });
 
-// ─── Progress ring ─────────────────────────────────────────────────
+// ─── Rate limit UI ────────────────────────────────────────────────────
+function showRatelimit(secs) {
+  ratelimitBox.classList.remove("hidden");
+  let remaining = secs;
+  $("rlCountdown").textContent = remaining;
+  clearInterval(rlTimer);
+  rlTimer = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) { clearInterval(rlTimer); hideRatelimit(); }
+    else $("rlCountdown").textContent = remaining;
+  }, 1000);
+}
+function hideRatelimit() { ratelimitBox.classList.add("hidden"); clearInterval(rlTimer); }
+
+// ─── Progress ring ────────────────────────────────────────────────────
 function setProgress(current, total, deleted = 0, failed = 0) {
   const pct = total > 0 ? Math.round((current / total) * 100) : 0;
   $("prcPct").textContent = pct + "%";
-  const circumference = 314;
-  ringFill.style.strokeDashoffset = circumference - (pct / 100) * circumference;
-  if (deleted !== undefined) $("pcDeleted").textContent = deleted;
-  if (failed !== undefined)  $("pcFailed").textContent  = failed;
+  ringFill.style.strokeDashoffset = 314 - (pct / 100) * 314;
+  $("pcDeleted").textContent = deleted;
+  $("pcFailed").textContent  = failed;
 }
 
-// ─── Log ───────────────────────────────────────────────────────────
+// ─── Log ─────────────────────────────────────────────────────────────
 function appendLog(msg, type = "info") {
   const el = document.createElement("div");
   el.className = `log-entry log-${type}`;
@@ -387,26 +351,18 @@ function appendLog(msg, type = "info") {
   el.textContent = `[${ts}] ${msg}`;
   logFeed.appendChild(el);
   logFeed.scrollTop = logFeed.scrollHeight;
-  // Keep log trimmed
-  while (logFeed.children.length > 200) logFeed.removeChild(logFeed.firstChild);
+  while (logFeed.children.length > 300) logFeed.removeChild(logFeed.firstChild);
 }
 
-// ─── Buttons ───────────────────────────────────────────────────────
+// ─── Wire up buttons ──────────────────────────────────────────────────
 btnFetch.addEventListener("click", () => fetchTweets(false));
 btnLoadMore.addEventListener("click", () => fetchTweets(true));
 
-// ─── Utils ─────────────────────────────────────────────────────────
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+// ─── Utils ───────────────────────────────────────────────────────────
+function escapeHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-// ─── Boot ──────────────────────────────────────────────────────────
-init();
+// ─── Init ─────────────────────────────────────────────────────────────
+appendLog("Connected as @" + (window.__username || document.querySelector(".user-handle")?.textContent?.replace("@","") || "user"), "success");
