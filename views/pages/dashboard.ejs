@@ -2,32 +2,38 @@
 <div class="dash-header">
   <div class="dash-title-row">
     <h1 class="dash-title"><i class="ri-skull-2-fill"></i> Delete Dashboard</h1>
-    <div class="user-badge" id="userBadge">
-      <div class="user-avatar-wrap">
-        <img id="userAvatar" src="" alt="" class="user-avatar hidden" />
+
+    <!-- User badge (populated from session) -->
+    <div class="user-badge">
+      <% if (user.profileImage) { %>
+        <img src="<%= user.profileImage %>" alt="<%= user.name %>" class="user-avatar" />
+      <% } else { %>
         <div class="user-avatar-placeholder"><i class="ri-twitter-x-fill"></i></div>
-      </div>
+      <% } %>
       <div class="user-info">
-        <span class="user-name" id="userName">Connecting...</span>
-        <span class="user-handle" id="userHandle">@—</span>
+        <span class="user-name"><%= user.name %></span>
+        <span class="user-handle">@<%= user.username %></span>
       </div>
       <div class="user-stat">
-        <span id="userTweetCount">—</span>
+        <span id="userTweetCount"><%= user.tweetCount ? user.tweetCount.toLocaleString() : '—' %></span>
         <span>tweets</span>
       </div>
+      <a href="/auth/logout" class="user-logout" title="Logout">
+        <i class="ri-logout-box-r-line"></i>
+      </a>
     </div>
   </div>
 </div>
 
 <div class="dash-layout">
 
-  <!-- LEFT: Controls panel -->
+  <!-- LEFT: Controls -->
   <aside class="controls-panel">
     <div class="panel-section">
       <h3 class="panel-label"><i class="ri-filter-3-line"></i> Filters</h3>
 
       <div class="form-group">
-        <label class="form-label">Delete tweets older than</label>
+        <label class="form-label">Older than date</label>
         <input type="date" id="filterDate" class="form-input" />
       </div>
 
@@ -37,7 +43,7 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Tweet types to include</label>
+        <label class="form-label">Tweet types</label>
         <div class="checkbox-group">
           <label class="checkbox-item">
             <input type="checkbox" id="inclReplies" />
@@ -66,7 +72,7 @@
           <span class="checkbox-box"></span>
           <span>
             <strong>Dry Run Mode</strong>
-            <small>Preview only — no actual deletions</small>
+            <small>Preview only — no deletions</small>
           </span>
         </label>
       </div>
@@ -83,7 +89,6 @@
       </button>
     </div>
 
-    <!-- Stats mini -->
     <div class="mini-stats" id="miniStats" style="display:none">
       <div class="mini-stat">
         <span class="ms-val" id="msLoaded">0</span>
@@ -93,19 +98,13 @@
         <span class="ms-val" id="msSelected">0</span>
         <span class="ms-label">Selected</span>
       </div>
-      <div class="mini-stat">
-        <span class="ms-val" id="msFiltered">0</span>
-        <span class="ms-label">Filtered</span>
-      </div>
     </div>
   </aside>
 
   <!-- CENTER: Tweet list -->
   <section class="tweet-panel">
     <div class="tweet-panel-header">
-      <div class="tweet-panel-title">
-        <span id="tweetPanelCount">No tweets loaded</span>
-      </div>
+      <span class="tweet-panel-title" id="tweetPanelCount">No tweets loaded</span>
       <div class="tweet-panel-actions">
         <button class="icon-btn" id="btnSelectAll" title="Select all" style="display:none">
           <i class="ri-checkbox-multiple-fill"></i>
@@ -116,50 +115,40 @@
       </div>
     </div>
 
-    <!-- Empty state -->
     <div class="empty-state" id="emptyState">
-      <div class="empty-skull">
-        <i class="ri-skull-2-fill"></i>
-      </div>
+      <div class="empty-skull"><i class="ri-skull-2-fill"></i></div>
       <h3>Nothing loaded yet</h3>
-      <p>Configure filters and click <strong>Fetch Tweets</strong> to begin.</p>
+      <p>Configure filters and click <strong>Fetch Tweets</strong>.</p>
     </div>
 
-    <!-- Loading state -->
     <div class="loading-state hidden" id="loadingState">
       <div class="loader-ring"></div>
-      <p>Fetching tweets from API...</p>
+      <p>Fetching from Twitter API...</p>
     </div>
 
-    <!-- Tweet list -->
     <div class="tweet-list" id="tweetList"></div>
   </section>
 
-  <!-- RIGHT: Delete panel -->
+  <!-- RIGHT: Delete controls -->
   <aside class="delete-panel">
     <div class="panel-section">
       <h3 class="panel-label"><i class="ri-delete-bin-7-line"></i> Execute</h3>
-
-      <div class="delete-summary" id="deleteSummary">
+      <div class="delete-summary">
         <div class="ds-num" id="dsNum">0</div>
-        <div class="ds-label">tweets selected for deletion</div>
+        <div class="ds-label">tweets selected</div>
       </div>
-
       <button class="btn btn-danger btn-full" id="btnDelete" disabled>
         <i class="ri-delete-bin-7-fill"></i>
         <span id="btnDeleteLabel">Delete Selected</span>
         <span class="btn-shine"></span>
       </button>
-
       <button class="btn btn-ghost btn-full mt-8" id="btnAbort" style="display:none">
         <i class="ri-stop-circle-line"></i> Abort
       </button>
     </div>
 
-    <!-- Progress section -->
     <div class="progress-section" id="progressSection" style="display:none">
       <h3 class="panel-label"><i class="ri-bar-chart-fill"></i> Progress</h3>
-
       <div class="progress-ring-wrap">
         <svg class="progress-ring" viewBox="0 0 120 120">
           <circle class="ring-bg" cx="60" cy="60" r="50" />
@@ -170,24 +159,22 @@
           <span class="prc-label">done</span>
         </div>
       </div>
-
       <div class="progress-counters">
-        <div class="pc-item pc-deleted">
-          <i class="ri-checkbox-circle-fill"></i>
-          <span id="pcDeleted">0</span> deleted
-        </div>
-        <div class="pc-item pc-failed">
-          <i class="ri-close-circle-fill"></i>
-          <span id="pcFailed">0</span> failed
-        </div>
+        <div class="pc-item pc-deleted"><i class="ri-checkbox-circle-fill"></i><span id="pcDeleted">0</span> ok</div>
+        <div class="pc-item pc-failed"><i class="ri-close-circle-fill"></i><span id="pcFailed">0</span> fail</div>
       </div>
     </div>
 
-    <!-- Activity log -->
-    <div class="log-section" id="logSection">
+    <!-- Ratelimit countdown -->
+    <div class="ratelimit-box hidden" id="ratelimitBox">
+      <i class="ri-time-fill"></i>
+      <span>Rate limited — resuming in <strong id="rlCountdown">60</strong>s</span>
+    </div>
+
+    <div class="log-section">
       <h3 class="panel-label"><i class="ri-terminal-box-line"></i> Live Log</h3>
       <div class="log-feed" id="logFeed">
-        <div class="log-entry log-info">System ready. Waiting for command.</div>
+        <div class="log-entry log-info">System ready.</div>
       </div>
     </div>
   </aside>
@@ -198,7 +185,7 @@
   <div class="modal">
     <div class="modal-skull"><i class="ri-skull-2-fill"></i></div>
     <h2 class="modal-title">Confirm Deletion</h2>
-    <p class="modal-body" id="modalBody">You are about to permanently delete <strong id="modalCount">0</strong> tweets. This action <strong>cannot be undone.</strong></p>
+    <p class="modal-body" id="modalBody">Loading...</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" id="modalCancel">Cancel</button>
       <button class="btn btn-danger" id="modalConfirm">
