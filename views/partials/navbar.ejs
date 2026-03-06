@@ -7,9 +7,22 @@
 
     <div class="nav-links">
       <a href="/" class="nav-link">Home</a>
-      <a href="/dashboard" class="nav-link nav-link-cta">
-        <i class="ri-delete-bin-7-fill"></i> Launch App
-      </a>
+      <% if (isAuth && user) { %>
+        <a href="/dashboard" class="nav-link">Dashboard</a>
+        <div class="nav-user">
+          <% if (user.profileImage) { %>
+            <img src="<%= user.profileImage %>" alt="<%= user.name %>" class="nav-avatar" />
+          <% } else { %>
+            <div class="nav-avatar-ph"><i class="ri-user-fill"></i></div>
+          <% } %>
+          <span class="nav-uname">@<%= user.username %></span>
+          <a href="/auth/logout" class="nav-logout" title="Logout"><i class="ri-logout-box-r-line"></i></a>
+        </div>
+      <% } else { %>
+        <a href="/auth/login" class="nav-link nav-link-cta">
+          <i class="ri-twitter-x-fill"></i> Connect Twitter
+        </a>
+      <% } %>
     </div>
 
     <button class="nav-burger" id="navBurger" aria-label="Menu">
@@ -19,6 +32,15 @@
 
   <div class="nav-mobile" id="navMobile">
     <a href="/" class="nav-mobile-link">Home</a>
-    <a href="/dashboard" class="nav-mobile-link">Launch App</a>
+    <% if (isAuth && user) { %>
+      <a href="/dashboard" class="nav-mobile-link">Dashboard</a>
+      <a href="/auth/logout" class="nav-mobile-link nav-mobile-logout">
+        <i class="ri-logout-box-r-line"></i> Logout (@<%= user.username %>)
+      </a>
+    <% } else { %>
+      <a href="/auth/login" class="nav-mobile-link nav-mobile-connect">
+        <i class="ri-twitter-x-fill"></i> Connect Twitter
+      </a>
+    <% } %>
   </div>
 </nav>
