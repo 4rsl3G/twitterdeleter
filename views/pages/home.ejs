@@ -1,60 +1,131 @@
+<!-- Error toast -->
+<% if (typeof error !== 'undefined' && error) { %>
+<div class="toast toast-error" id="errorToast">
+  <i class="ri-error-warning-fill"></i>
+  <span><%= error %></span>
+  <button onclick="this.parentElement.remove()"><i class="ri-close-line"></i></button>
+</div>
+<% } %>
+
 <section class="hero">
   <div class="hero-eyebrow">
     <span class="eyebrow-dot"></span>
-    Twitter API v2 &bull; Official &bull; Real-time
+    Twitter API v2 &bull; OAuth &bull; Real-time SSE
   </div>
 
   <h1 class="hero-title">
-    <span class="title-line reveal-line">Erase Your</span>
-    <span class="title-line reveal-line title-accent">Twitter Past.</span>
-    <span class="title-line reveal-line">Ruthlessly.</span>
+    <span class="title-line">Erase Your</span>
+    <span class="title-line title-accent">Twitter Past.</span>
+    <span class="title-line">Ruthlessly.</span>
   </h1>
 
   <p class="hero-sub">
-    Bulk delete thousands of tweets in minutes. Filter by date, keyword,
-    or type. Watch them die in real-time with a cinematic progress feed.
+    Login with your Twitter account and bulk delete thousands of tweets in minutes.
+    Filter by date, keyword, or type — watch them vanish in real-time.
   </p>
 
-  <div class="hero-actions">
-    <a href="/dashboard" class="btn btn-primary">
-      <i class="ri-delete-bin-7-fill"></i>
-      Start Deleting
-      <span class="btn-shine"></span>
-    </a>
-    <a href="#how" class="btn btn-ghost">
-      <i class="ri-arrow-down-line"></i>
-      How it works
-    </a>
+  <% if (isAuth && user) { %>
+  <!-- Already logged in -->
+  <div class="auth-connected-box">
+    <% if (user.profileImage) { %>
+      <img src="<%= user.profileImage %>" class="connected-avatar" alt="<%= user.name %>" />
+    <% } %>
+    <div class="connected-info">
+      <span class="connected-label"><i class="ri-checkbox-circle-fill"></i> Connected as</span>
+      <strong><%= user.name %></strong>
+      <span class="connected-handle">@<%= user.username %></span>
+    </div>
+    <div class="connected-actions">
+      <a href="/dashboard" class="btn btn-primary">
+        <i class="ri-delete-bin-7-fill"></i> Open Dashboard
+        <span class="btn-shine"></span>
+      </a>
+      <a href="/auth/logout" class="btn btn-ghost">Logout</a>
+    </div>
   </div>
-
-  <% if (!configured) { %>
-  <div class="alert-banner">
-    <i class="ri-key-2-fill"></i>
-    <span>No API credentials detected. Add your keys to <code>.env</code> before using.</span>
+  <% } else { %>
+  <!-- Not logged in -->
+  <div class="hero-actions">
+    <% if (appConfigured) { %>
+      <a href="/auth/login" class="btn btn-twitter btn-xl">
+        <i class="ri-twitter-x-fill"></i>
+        Connect with Twitter
+        <span class="btn-shine"></span>
+      </a>
+    <% } else { %>
+      <div class="alert-banner">
+        <i class="ri-key-2-fill"></i>
+        <span>App not configured. Set <code>TWITTER_API_KEY</code> and <code>TWITTER_API_SECRET</code> in your <code>.env</code> file.</span>
+      </div>
+    <% } %>
+    <a href="#how" class="btn btn-ghost btn-xl">
+      <i class="ri-arrow-down-line"></i> How it works
+    </a>
   </div>
   <% } %>
 
-  <!-- Stats row -->
+  <!-- Stats -->
   <div class="stats-row">
-    <div class="stat-item" data-count="1000">
+    <div class="stat-item">
       <span class="stat-num" id="stat-0">0</span>
       <span class="stat-label">Tweets/batch</span>
     </div>
     <div class="stat-sep">/</div>
-    <div class="stat-item" data-count="100">
+    <div class="stat-item">
       <span class="stat-num" id="stat-1">0</span>
       <span class="stat-label">% Real API</span>
     </div>
     <div class="stat-sep">/</div>
-    <div class="stat-item" data-count="0">
+    <div class="stat-item">
       <span class="stat-num" id="stat-2">0</span>
       <span class="stat-label">Data stored</span>
     </div>
   </div>
 </section>
 
+<!-- How it works -->
+<section class="howitworks" id="how">
+  <div class="section-header">
+    <span class="section-tag">Setup in 2 steps</span>
+    <h2 class="section-title">Dead simple. <span class="text-accent">No manual keys.</span></h2>
+  </div>
+
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <div class="step-icon"><i class="ri-settings-3-fill"></i></div>
+      <h3>Configure .env</h3>
+      <p>Add your Twitter App's <strong>API Key</strong> and <strong>API Secret</strong> to the <code>.env</code> file. Only app credentials needed — no user keys required.</p>
+      <div class="step-code">
+        <span class="code-line"><span class="code-key">TWITTER_API_KEY</span>=<span class="code-val">your_key</span></span>
+        <span class="code-line"><span class="code-key">TWITTER_API_SECRET</span>=<span class="code-val">your_secret</span></span>
+      </div>
+    </div>
+
+    <div class="step-arrow"><i class="ri-arrow-right-line"></i></div>
+
+    <div class="step-card step-card-accent">
+      <div class="step-num">02</div>
+      <div class="step-icon"><i class="ri-twitter-x-fill"></i></div>
+      <h3>Login with Twitter</h3>
+      <p>Click the <strong>"Connect with Twitter"</strong> button. Authorize the app on Twitter's official page. You're redirected back instantly — no keys to copy-paste.</p>
+      <div class="step-badge">OAuth 1.0a &bull; Secure &bull; Official</div>
+    </div>
+
+    <div class="step-arrow"><i class="ri-arrow-right-line"></i></div>
+
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <div class="step-icon"><i class="ri-delete-bin-7-fill"></i></div>
+      <h3>Start Deleting</h3>
+      <p>Set your filters. Load tweets. Select all or pick individually. Hit delete and watch the real-time progress feed as your tweets are erased forever.</p>
+      <div class="step-badge step-badge-red">Irreversible &bull; API v2</div>
+    </div>
+  </div>
+</section>
+
 <!-- Features -->
-<section class="features" id="how">
+<section class="features" id="features">
   <div class="section-header">
     <span class="section-tag">Features</span>
     <h2 class="section-title">Surgical. Fast. <span class="text-accent">Lethal.</span></h2>
@@ -69,45 +140,48 @@
         <span>Date range</span><span>Keyword</span><span>Type</span>
       </div>
     </div>
-
     <div class="feature-card">
       <div class="feature-icon"><i class="ri-broadcast-fill"></i></div>
       <h3>Live Feed</h3>
-      <p>Server-Sent Events push real-time delete progress. Watch every tweet vanish.</p>
+      <p>Server-Sent Events stream real-time delete progress. Watch every tweet vanish with timestamps.</p>
     </div>
-
     <div class="feature-card">
       <div class="feature-icon"><i class="ri-shield-check-fill"></i></div>
       <h3>Dry Run Mode</h3>
-      <p>Preview exactly what will be deleted. Zero deletions until you confirm.</p>
+      <p>Preview exactly what will be deleted — zero deletions until you confirm.</p>
     </div>
-
     <div class="feature-card">
       <div class="feature-icon"><i class="ri-time-fill"></i></div>
       <h3>Rate Limit Guard</h3>
-      <p>Auto-detects API limits. Pauses, waits, resumes. Never fails silently.</p>
+      <p>Auto-detects API limits. Pauses, waits the exact time, then resumes. Never fails silently.</p>
     </div>
-
     <div class="feature-card fc-wide">
-      <div class="feature-icon"><i class="ri-key-2-fill"></i></div>
-      <h3>Your Keys, Your Data</h3>
-      <p>Credentials live in your <code>.env</code> file. Nothing leaves your server. No tracking, no storage, no third-party.</p>
+      <div class="feature-icon"><i class="ri-lock-password-fill"></i></div>
+      <h3>OAuth — No Key Juggling</h3>
+      <p>Login with Twitter's official OAuth flow. Your user tokens are stored in a secure server session — not in localStorage, not in a database, not sent to any third party.</p>
       <div class="feature-tags">
-        <span>Self-hosted</span><span>Open source</span><span>Privacy-first</span>
+        <span>OAuth 1.0a</span><span>Server-session</span><span>Self-hosted</span>
       </div>
     </div>
   </div>
 </section>
 
-<!-- CTA section -->
+<!-- CTA -->
 <section class="cta-section">
   <div class="cta-inner">
     <div class="cta-skull"><i class="ri-skull-2-fill"></i></div>
     <h2>Ready to clean up?</h2>
     <p>Your old tweets are a liability. Let's fix that.</p>
-    <a href="/dashboard" class="btn btn-primary btn-xl">
-      <i class="ri-delete-bin-7-fill"></i> Open Dashboard
-      <span class="btn-shine"></span>
-    </a>
+    <% if (isAuth) { %>
+      <a href="/dashboard" class="btn btn-primary btn-xl">
+        <i class="ri-delete-bin-7-fill"></i> Open Dashboard
+        <span class="btn-shine"></span>
+      </a>
+    <% } else { %>
+      <a href="/auth/login" class="btn btn-twitter btn-xl">
+        <i class="ri-twitter-x-fill"></i> Connect Twitter & Start
+        <span class="btn-shine"></span>
+      </a>
+    <% } %>
   </div>
 </section>
