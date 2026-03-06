@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css" />
+  <link rel="stylesheet" href="/css/main.css" />
+</head>
+<body>
+  <!-- Noise texture overlay -->
+  <div class="noise-overlay" aria-hidden="true"></div>
+
+  <!-- Animated grid background -->
+  <div class="grid-bg" aria-hidden="true"></div>
+
+  <!-- Glowing orbs -->
+  <div class="orb orb-1" aria-hidden="true"></div>
+  <div class="orb orb-2" aria-hidden="true"></div>
+  <div class="orb orb-3" aria-hidden="true"></div>
+
+  <!-- Scanlines -->
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <%- include('../partials/navbar') %>
+
+  <main class="main-content">
+    <%- body %>
+  </main>
+
+  <%- include('../partials/footer') %>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>
