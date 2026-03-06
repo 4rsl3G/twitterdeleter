@@ -1,0 +1,212 @@
+<!-- Dashboard Header -->
+<div class="dash-header">
+  <div class="dash-title-row">
+    <h1 class="dash-title"><i class="ri-skull-2-fill"></i> Delete Dashboard</h1>
+    <div class="user-badge" id="userBadge">
+      <div class="user-avatar-wrap">
+        <img id="userAvatar" src="" alt="" class="user-avatar hidden" />
+        <div class="user-avatar-placeholder"><i class="ri-twitter-x-fill"></i></div>
+      </div>
+      <div class="user-info">
+        <span class="user-name" id="userName">Connecting...</span>
+        <span class="user-handle" id="userHandle">@—</span>
+      </div>
+      <div class="user-stat">
+        <span id="userTweetCount">—</span>
+        <span>tweets</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dash-layout">
+
+  <!-- LEFT: Controls panel -->
+  <aside class="controls-panel">
+    <div class="panel-section">
+      <h3 class="panel-label"><i class="ri-filter-3-line"></i> Filters</h3>
+
+      <div class="form-group">
+        <label class="form-label">Delete tweets older than</label>
+        <input type="date" id="filterDate" class="form-input" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Contains keyword</label>
+        <input type="text" id="filterKeyword" class="form-input" placeholder="e.g. crypto, nft..." />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tweet types to include</label>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" id="inclReplies" />
+            <span class="checkbox-box"></span>
+            Include Replies
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="inclRetweets" />
+            <span class="checkbox-box"></span>
+            Include Retweets
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Delay between deletes</label>
+        <div class="slider-wrap">
+          <input type="range" id="delaySlider" min="300" max="3000" step="100" value="1000" class="form-slider" />
+          <span class="slider-val" id="delayVal">1000ms</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-item checkbox-item-big">
+          <input type="checkbox" id="dryRun" />
+          <span class="checkbox-box"></span>
+          <span>
+            <strong>Dry Run Mode</strong>
+            <small>Preview only — no actual deletions</small>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3 class="panel-label"><i class="ri-download-2-line"></i> Load Tweets</h3>
+      <button class="btn btn-primary btn-full" id="btnFetch">
+        <i class="ri-refresh-line"></i> Fetch Tweets
+        <span class="btn-shine"></span>
+      </button>
+      <button class="btn btn-ghost btn-full mt-8" id="btnLoadMore" style="display:none">
+        <i class="ri-add-line"></i> Load More
+      </button>
+    </div>
+
+    <!-- Stats mini -->
+    <div class="mini-stats" id="miniStats" style="display:none">
+      <div class="mini-stat">
+        <span class="ms-val" id="msLoaded">0</span>
+        <span class="ms-label">Loaded</span>
+      </div>
+      <div class="mini-stat">
+        <span class="ms-val" id="msSelected">0</span>
+        <span class="ms-label">Selected</span>
+      </div>
+      <div class="mini-stat">
+        <span class="ms-val" id="msFiltered">0</span>
+        <span class="ms-label">Filtered</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CENTER: Tweet list -->
+  <section class="tweet-panel">
+    <div class="tweet-panel-header">
+      <div class="tweet-panel-title">
+        <span id="tweetPanelCount">No tweets loaded</span>
+      </div>
+      <div class="tweet-panel-actions">
+        <button class="icon-btn" id="btnSelectAll" title="Select all" style="display:none">
+          <i class="ri-checkbox-multiple-fill"></i>
+        </button>
+        <button class="icon-btn" id="btnDeselectAll" title="Deselect all" style="display:none">
+          <i class="ri-checkbox-blank-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-skull">
+        <i class="ri-skull-2-fill"></i>
+      </div>
+      <h3>Nothing loaded yet</h3>
+      <p>Configure filters and click <strong>Fetch Tweets</strong> to begin.</p>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading-state hidden" id="loadingState">
+      <div class="loader-ring"></div>
+      <p>Fetching tweets from API...</p>
+    </div>
+
+    <!-- Tweet list -->
+    <div class="tweet-list" id="tweetList"></div>
+  </section>
+
+  <!-- RIGHT: Delete panel -->
+  <aside class="delete-panel">
+    <div class="panel-section">
+      <h3 class="panel-label"><i class="ri-delete-bin-7-line"></i> Execute</h3>
+
+      <div class="delete-summary" id="deleteSummary">
+        <div class="ds-num" id="dsNum">0</div>
+        <div class="ds-label">tweets selected for deletion</div>
+      </div>
+
+      <button class="btn btn-danger btn-full" id="btnDelete" disabled>
+        <i class="ri-delete-bin-7-fill"></i>
+        <span id="btnDeleteLabel">Delete Selected</span>
+        <span class="btn-shine"></span>
+      </button>
+
+      <button class="btn btn-ghost btn-full mt-8" id="btnAbort" style="display:none">
+        <i class="ri-stop-circle-line"></i> Abort
+      </button>
+    </div>
+
+    <!-- Progress section -->
+    <div class="progress-section" id="progressSection" style="display:none">
+      <h3 class="panel-label"><i class="ri-bar-chart-fill"></i> Progress</h3>
+
+      <div class="progress-ring-wrap">
+        <svg class="progress-ring" viewBox="0 0 120 120">
+          <circle class="ring-bg" cx="60" cy="60" r="50" />
+          <circle class="ring-fill" cx="60" cy="60" r="50" id="ringFill" />
+        </svg>
+        <div class="progress-ring-center">
+          <span class="prc-pct" id="prcPct">0%</span>
+          <span class="prc-label">done</span>
+        </div>
+      </div>
+
+      <div class="progress-counters">
+        <div class="pc-item pc-deleted">
+          <i class="ri-checkbox-circle-fill"></i>
+          <span id="pcDeleted">0</span> deleted
+        </div>
+        <div class="pc-item pc-failed">
+          <i class="ri-close-circle-fill"></i>
+          <span id="pcFailed">0</span> failed
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity log -->
+    <div class="log-section" id="logSection">
+      <h3 class="panel-label"><i class="ri-terminal-box-line"></i> Live Log</h3>
+      <div class="log-feed" id="logFeed">
+        <div class="log-entry log-info">System ready. Waiting for command.</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <div class="modal-skull"><i class="ri-skull-2-fill"></i></div>
+    <h2 class="modal-title">Confirm Deletion</h2>
+    <p class="modal-body" id="modalBody">You are about to permanently delete <strong id="modalCount">0</strong> tweets. This action <strong>cannot be undone.</strong></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modalCancel">Cancel</button>
+      <button class="btn btn-danger" id="modalConfirm">
+        <i class="ri-delete-bin-7-fill"></i> Delete Forever
+        <span class="btn-shine"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/dashboard.js"></script>
