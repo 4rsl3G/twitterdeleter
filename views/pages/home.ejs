@@ -1,0 +1,113 @@
+<section class="hero">
+  <div class="hero-eyebrow">
+    <span class="eyebrow-dot"></span>
+    Twitter API v2 &bull; Official &bull; Real-time
+  </div>
+
+  <h1 class="hero-title">
+    <span class="title-line reveal-line">Erase Your</span>
+    <span class="title-line reveal-line title-accent">Twitter Past.</span>
+    <span class="title-line reveal-line">Ruthlessly.</span>
+  </h1>
+
+  <p class="hero-sub">
+    Bulk delete thousands of tweets in minutes. Filter by date, keyword,
+    or type. Watch them die in real-time with a cinematic progress feed.
+  </p>
+
+  <div class="hero-actions">
+    <a href="/dashboard" class="btn btn-primary">
+      <i class="ri-delete-bin-7-fill"></i>
+      Start Deleting
+      <span class="btn-shine"></span>
+    </a>
+    <a href="#how" class="btn btn-ghost">
+      <i class="ri-arrow-down-line"></i>
+      How it works
+    </a>
+  </div>
+
+  <% if (!configured) { %>
+  <div class="alert-banner">
+    <i class="ri-key-2-fill"></i>
+    <span>No API credentials detected. Add your keys to <code>.env</code> before using.</span>
+  </div>
+  <% } %>
+
+  <!-- Stats row -->
+  <div class="stats-row">
+    <div class="stat-item" data-count="1000">
+      <span class="stat-num" id="stat-0">0</span>
+      <span class="stat-label">Tweets/batch</span>
+    </div>
+    <div class="stat-sep">/</div>
+    <div class="stat-item" data-count="100">
+      <span class="stat-num" id="stat-1">0</span>
+      <span class="stat-label">% Real API</span>
+    </div>
+    <div class="stat-sep">/</div>
+    <div class="stat-item" data-count="0">
+      <span class="stat-num" id="stat-2">0</span>
+      <span class="stat-label">Data stored</span>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="how">
+  <div class="section-header">
+    <span class="section-tag">Features</span>
+    <h2 class="section-title">Surgical. Fast. <span class="text-accent">Lethal.</span></h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card fc-wide">
+      <div class="feature-icon"><i class="ri-filter-3-fill"></i></div>
+      <h3>Smart Filters</h3>
+      <p>Delete by date range, keyword match, tweet type (original, replies, retweets). Combine filters for precision targeting.</p>
+      <div class="feature-tags">
+        <span>Date range</span><span>Keyword</span><span>Type</span>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="ri-broadcast-fill"></i></div>
+      <h3>Live Feed</h3>
+      <p>Server-Sent Events push real-time delete progress. Watch every tweet vanish.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="ri-shield-check-fill"></i></div>
+      <h3>Dry Run Mode</h3>
+      <p>Preview exactly what will be deleted. Zero deletions until you confirm.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon"><i class="ri-time-fill"></i></div>
+      <h3>Rate Limit Guard</h3>
+      <p>Auto-detects API limits. Pauses, waits, resumes. Never fails silently.</p>
+    </div>
+
+    <div class="feature-card fc-wide">
+      <div class="feature-icon"><i class="ri-key-2-fill"></i></div>
+      <h3>Your Keys, Your Data</h3>
+      <p>Credentials live in your <code>.env</code> file. Nothing leaves your server. No tracking, no storage, no third-party.</p>
+      <div class="feature-tags">
+        <span>Self-hosted</span><span>Open source</span><span>Privacy-first</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA section -->
+<section class="cta-section">
+  <div class="cta-inner">
+    <div class="cta-skull"><i class="ri-skull-2-fill"></i></div>
+    <h2>Ready to clean up?</h2>
+    <p>Your old tweets are a liability. Let's fix that.</p>
+    <a href="/dashboard" class="btn btn-primary btn-xl">
+      <i class="ri-delete-bin-7-fill"></i> Open Dashboard
+      <span class="btn-shine"></span>
+    </a>
+  </div>
+</section>
